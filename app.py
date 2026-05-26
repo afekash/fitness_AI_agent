@@ -111,4 +111,6 @@ if user_input:
         
     except Exception as e:
         with st.chat_message("assistant"):
-            st.write("אופס, משהו השתבש בעיבוד הנתונים. נסי שוב עוד רגע! 😉")
+            st.write("⚠️ השגיאה האמיתית שקפצה היא:")
+            st.code(str(e))  # זה ידפיס את השגיאה המדויקת בתוך קוביית קוד
+            st.write("נסי לבדוק את ה-API Key או את פורמט ה-JSON שנשלח.")
