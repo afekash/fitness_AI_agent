@@ -7,9 +7,22 @@ st.title("💪 FitAI – סוכן הבריאות והכושר האישי שלך"
 st.write("הממשק מוכן! בשלב הבא נחבר את ה-AI שינתח את מה שאת כותבת.")
 
 # --- יצירת סרגל הצד (Sidebar) להגדרות ---
-st.sidebar.header("🎯 היעדים היומיים שלך")
-target_calories = st.sidebar.number_input("יעד קלוריות יומי", value=2000, step=100)
-target_water = st.sidebar.number_input("יעד מים יומי (מ''ל)", value=2500, step=250)
+# סרגל צד (Sidebar)
+st.sidebar.title("🎯 הגדרות ויעדים")
+
+# ------ כאן אנחנו מוסיפים את הפרופיל האישי החדש ------
+st.sidebar.markdown("### 👤 פרופיל אישי")
+gender = st.sidebar.selectbox("מגדר", ["אישה", "גבר"])
+age = st.sidebar.number_input("גיל", min_value=10, max_value=100, value=22, step=1)
+weight = st.sidebar.number_input("משקל נוכחי (ק״ג)", min_value=30.0, max_value=200.0, value=65.0, step=0.1)
+height = st.sidebar.number_input("גובה (ס״מ)", min_value=100, max_value=250, value=170, step=1)
+
+st.sidebar.markdown("---") # קו מפריד
+
+# יעדים יומיים (הקוד שהיה לך מקודם)
+st.sidebar.markdown("### 📅 יעדים יומיים")
+calorie_target = st.sidebar.number_input("יעד קלוריות יומי", value=1800, step=50)
+water_target = st.sidebar.number_input("יעד מים יומי (ליטרים)", value=2.5, step=0.5)
 
 # --- משתני מערכת (Session State) לשמירת המדדים של המשתמש בזמן ריצה ---
 if "current_calories" not in st.session_state:
