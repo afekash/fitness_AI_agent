@@ -1,5 +1,4 @@
 import streamlit as st
-# מייבאים את הספרייה הרשמית החדשה של גוגל ל-Gemini
 from google import genai
 import json
 
@@ -34,7 +33,6 @@ if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
 # --- חיבור ל-Gemini באמצעות המפתח מהכספת ---
-# ה-Streamlit מושך אוטומטית את המפתח מה-Secrets שהגדרת
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
 # --- הצגת מדדי התקדמות (Progress Bars) במרכז המסך ---
@@ -67,50 +65,48 @@ if user_input:
     st.chat_message("user").write(user_input)
     st.session_state.chat_history.append({"role": "user", "content": user_input})
     
-    # 2. בניית הפרומפט ל-Gemini - נותנים לו תפקיד והוראות מוגדרות
+    # 2. בניית ההוראות ל-AI
     system_instruction = f"""
-    אתה מאמן כושר ותזונאי אישי חכם, מעודד ומקצועי.
+    אתה מאמן כושר ותזונאי אישי חכם ומקצועי.
     המשתמשת מולך היא {gender} בגיל {age}, במשקל {weight} ק"ג ובגובה {height} ס"מ.
-    התפקיד שלך הוא לנתח את מה שהיא אכלה או שתתה בהודעה האחרונה.
+    עליך לנתח את מה שהיא אכלה או שתתה בהודעה האחרונה ולהחזיר אך ורק אובייקט JSON תקין.
     
-    עליך להחזיר תגובה אך ורק בפורמט JSON תקין, ללא שום טקסט נוסף לפניו או אחריו (בלי סימני ```json).
-    מבנה ה-JSON חייב להיות בדיוק כזה:
+    מבנה ה-JSON:
     {{
-        "response": "כאן תכתוב תגובה קצרה, מפרגנת ומקצועית בעברית על מה שהיא דיווחה (למשל: 'כל הכבוד על הבחירה הבריאה! סלט יווני הוא מקור מצוין לסיבים')",
-        "added_calories": 350,
-        "added_water": 0.4
+        "response": "תגובה קצרה ומעודדת בעברית על מה שהיא דיווחה",
+        "added_calories": מספר קלוריות של האוכל (מספר שלם, או 0 אם לא אכלה),
+        "added_water": כמות המים בליטרים (מספר עשרוני, למשל 0.5, או 0.0 אם לא שתתה)
     }}
-    שים לב: 
-    - אם היא לא דיווחה על אוכל, ה-added_calories יהיה 0.
-    - אם היא לא דיווחה על שתייה, ה-added_water יהיה 0 (רשום את ערך המים בליטרים, למשל 2 כוסות מים זה 0.4 או 0.5 ליטר).
     """
     
     try:
-        # 3. פנייה ל-Gemini לקבלת הניתוח
+        # 3. פנייה ל-Gemini עם הגדרת חובה להחזרת JSON
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=user_input,
-            config={'system_instruction': system_instruction}
+            config={
+                'system_instruction': system_instruction,
+                'response_mime_type': 'application/json' # מכריח את המודל לענות ב-JSON נקי
+            }
         )
         
-        # 4. פירוק ה-JSON שחזר מה-AI
+        # 4. פירוק ה-JSON
         result = json.loads(response.text.strip())
         
-        # 5. עדכון המדדים ב-Session State
-        st.session_state.current_calories += result.get("added_calories", 0)
-        st.session_state.current_water += result.get("added_water", 0.0)
+        # 5. עדכון המדדים
+        st.session_state.current_calories += int(result.get("added_calories", 0))
+        st.session_state.current_water += float(result.get("added_water", 0.0))
         
-        # 6. מציג ושומר את תגובת ה-AI
-        ai_response = result.get("response", "הצלחתי לעבד את המידע!")
+        # 6. הצגת תגובת ה-AI
+        ai_response = result.get("response", "הנתונים עודכנו בהצלחה!")
         with st.chat_message("assistant"):
             st.write(ai_response)
         st.session_state.chat_history.append({"role": "assistant", "content": ai_response})
         
-        # מרעננים את העמוד כדי שהמדים למעלה יתעדכנו מיד במספרים החדשים
+        # ריענון האפליקציה לעדכון המדים
         st.rerun()
         
     except Exception as e:
         with st.chat_message("assistant"):
-            st.write("⚠️ השגיאה האמיתית שקפצה היא:")
-            st.code(str(e))  # זה ידפיס את השגיאה המדויקת בתוך קוביית קוד
-            st.write("נסי לבדוק את ה-API Key או את פורמט ה-JSON שנשלח.")
+            st.error("התרחשה שגיאה בתקשורת עם ה-AI:")
+            st.exception(e) # מציג את השגיאה המלאה והמדויקת של פייתון במבנה אדום וברור
