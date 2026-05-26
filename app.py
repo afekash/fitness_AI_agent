@@ -7,7 +7,6 @@ st.title("💪 FitAI – סוכן הבריאות והכושר האישי שלך"
 st.write("הממשק מוכן! בשלב הבא נחבר את ה-AI שינתח את מה שאת כותבת.")
 
 # --- יצירת סרגל הצד (Sidebar) להגדרות ---
-# סרגל צד (Sidebar)
 st.sidebar.title("🎯 הגדרות ויעדים")
 
 # ------ כאן אנחנו מוסיפים את הפרופיל האישי החדש ------
@@ -19,7 +18,7 @@ height = st.sidebar.number_input("גובה (ס״מ)", min_value=100, max_value=2
 
 st.sidebar.markdown("---") # קו מפריד
 
-# יעדים יומיים (הקוד שהיה לך מקודם)
+# יעדים יומיים
 st.sidebar.markdown("### 📅 יעדים יומיים")
 calorie_target = st.sidebar.number_input("יעד קלוריות יומי", value=1800, step=50)
 water_target = st.sidebar.number_input("יעד מים יומי (ליטרים)", value=2.5, step=0.5)
@@ -35,16 +34,17 @@ col1, col2 = st.columns(2)
 
 with col1:
     st.subheader("🍎 תזונה (קלוריות)")
-    # חישוב אחוז ההתקדמות (ערך בין 0.0 ל-1.0 עבור הציור של המד)
-    cal_progress = min(st.session_state.current_calories / target_calories, 1.0) if target_calories > 0 else 0.0
+    # תיקון: שימוש ב-calorie_target שהוגדר בסיידבר
+    cal_progress = min(st.session_state.current_calories / calorie_target, 1.0) if calorie_target > 0 else 0.0
     st.progress(cal_progress)
-    st.write(f"{st.session_state.current_calories} / {target_calories} קק''ל")
+    st.write(f"{st.session_state.current_calories} / {calorie_target} קק''ל")
 
 with col2:
     st.subheader("💧 רוויה (מים)")
-    water_progress = min(st.session_state.current_water / target_water, 1.0) if target_water > 0 else 0.0
+    # תיקון: שימוש ב-water_target שהוגדר בסיידבר
+    water_progress = min(st.session_state.current_water / water_target, 1.0) if water_target > 0 else 0.0
     st.progress(water_progress)
-    st.write(f"{st.session_state.current_water} / {target_water} מ''ל")
+    st.write(f"{st.session_state.current_water} / {water_target} ליטר")
 
 # --- אזור הצ'אט ---
 st.divider()
