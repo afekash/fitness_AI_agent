@@ -54,4 +54,5 @@ with col1:
 with col2:
     st.subheader("🥩 חלבון (גרם)")
     protein_progress = min(st.session_state.current_protein / protein_target, 1.0) if protein_target > 0 else 0.0
-    st.progress(protein_
+    st.progress(protein_progress)
+    st.write(f"{st.session_state.current_protein} / {protein_target} ג׳")
