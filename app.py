@@ -4,8 +4,12 @@ import json
 import requests
 
 
+
+
 # הגדרת כותרת האפליקציה
 st.set_page_config(page_title="FitAI Buddy", page_icon="💪", layout="wide")
+
+
 
 
 # --- פונקציה לשליחת נתונים לאקסל ---
@@ -24,7 +28,11 @@ def log_to_sheets(user_input, ai_response, calories, protein, water):
         pass
 
 
+
+
 st.title("💪 FitAI – סוכן הבריאות והכושר האישי שלך")
+
+
 
 
 # --- הגדרות צד ---
@@ -38,6 +46,8 @@ protein_target = int(weight * 2)
 water_target = st.sidebar.number_input("יעד מים יומי (ליטרים)", value=2.5, step=0.5)
 
 
+
+
 # --- משתני מערכת ---
 if "current_calories" not in st.session_state: st.session_state.current_calories = 0
 if "current_protein" not in st.session_state: st.session_state.current_protein = 0
@@ -45,8 +55,12 @@ if "current_water" not in st.session_state: st.session_state.current_water = 0
 if "chat_history" not in st.session_state: st.session_state.chat_history = []
 
 
+
+
 # --- חיבור ל-Gemini ---
 client = genai.Client(api_key=st.secrets["[Credentials]"])
+
+
 
 
 # --- תצוגת מדדים ---
@@ -62,10 +76,16 @@ with col3:
     st.write(f"{st.session_state.current_water} / {water_target}")
 
 
+
+
 st.divider()
 
 
+
+
 user_input = st.chat_input("למשל: אכלתי קוטג' וטונה ושתיתי כוס מים...")
+
+
 
 
 if user_input:
@@ -87,13 +107,3 @@ if user_input:
         wat = float(result.get("added_water", 0.0))
         
         st.session_state.current_calories += cal
-        st.session_state.current_protein += prot
-        st.session_state.current_water += wat
-        
-        log_to_sheets(user_input, result.get("response"), cal, prot, wat)
-        
-        st.session_state.chat_history.append({"role": "assistant", "content": result.get("response")})
-        st.rerun()
-    except Exception as e:
-        st.error("התרחשה שגיאה בתקשורת עם ה-AI")
-        st.write(e)
