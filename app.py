@@ -1,71 +1,90 @@
 import streamlit as st
 from google import genai
 import json
-import os
 
-# הגדרת כותרת האפליקציה
+# הגדרת כותרת האפליקציה ואייקון לשונית בדפדפן
 st.set_page_config(page_title="FitAI Buddy", page_icon="💪", layout="wide")
 
-# --- פונקציות שמירה וטעינה (זיכרון קבוע) ---
-DATA_FILE = "data.json"
-
-def load_data():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r") as f:
-            return json.load(f)
-    # נתונים התחלתיים
-    return {"calories": 0, "protein": 0, "burned": 0, "water": 0}
-
-def save_data(data):
-    with open(DATA_FILE, "w") as f:
-        json.dump(data, f)
-
-data = load_data()
-
 st.title("💪 FitAI – סוכן הבריאות והכושר האישי שלך")
+st.write("ה-AI מחובר! נסי לכתוב לו מה אכלת, שתית או איזה אימון עשית והמדדים יתעדכנו אוטומטית.")
 
-# --- הגדרות צד (היעדים שלך) ---
+# --- יצירת סרגל הצד (Sidebar) להגדרות ---
 st.sidebar.title("🎯 הגדרות ויעדים")
-calorie_target = st.sidebar.number_input("יעד קלוריות יומי", value=1800, step=50)
-water_target = st.sidebar.number_input("יעד מים יומי (ליטרים)", value=2.5, step=0.1)
+gender = st.sidebar.selectbox("מגדר", ["אישה", "גבר"])
+age = st.sidebar.number_input("גיל", min_value=10, max_value=100, value=22, step=1)
+weight = st.sidebar.number_input("משקל נוכחי (ק״ג)", min_value=30.0, max_value=200.0, value=65.0, step=0.1)
+height = st.sidebar.number_input("גובה (ס״מ)", min_value=100, max_value=250, value=170, step=1)
+calorie_target = st.sidebar.number_input("יעד קלוריות יומי (נטו)", value=1800, step=50)
+protein_target = int(weight * 2)
+water_target = st.sidebar.number_input("יעד מים יומי (ליטרים)", value=2.5, step=0.5)
+
+# --- משתני מערכת ---
+if "current_calories" not in st.session_state: st.session_state.current_calories = 0
+if "current_protein" not in st.session_state: st.session_state.current_protein = 0
+if "current_water" not in st.session_state: st.session_state.current_water = 0
+if "calories_burned" not in st.session_state: st.session_state.calories_burned = 0 # חדש
+if "chat_history" not in st.session_state: st.session_state.chat_history = []
 
 # --- חיבור ל-Gemini ---
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
-# --- תצוגת מדדים ---
+# --- הצגת מדדים ---
 col1, col2, col3, col4 = st.columns(4)
 with col1:
-    st.subheader("🍎 קלוריות"); st.write(f"{data['calories']} / {calorie_target}")
+    st.subheader("🍎 קלוריות שנאכלו")
+    st.write(f"{st.session_state.current_calories} קק\"ל")
 with col2:
-    st.subheader("🔥 שריפה"); st.write(f"{data['burned']} קק\"ל")
+    st.subheader("🔥 קלוריות שנשרפו")
+    st.write(f"{st.session_state.calories_burned} קק\"ל")
 with col3:
-    st.subheader("🥩 חלבון"); st.write(f"{data['protein']} גרם")
+    st.subheader("🥩 חלבון")
+    st.write(f"{st.session_state.current_protein} ג׳")
 with col4:
-    st.subheader("💧 מים"); st.write(f"{data['water']} / {water_target} ליטר")
+    st.subheader("💧 מים")
+    st.write(f"{st.session_state.current_water} ליטר")
 
 st.divider()
 
-user_input = st.chat_input("מה אכלת או איזה אימון עשית?")
+# --- היסטוריה ---
+for message in st.session_state.chat_history:
+    with st.chat_message(message["role"]):
+        st.write(message["content"])
+
+user_input = st.chat_input("למשל: אכלתי קוטג', או: רצתי 30 דקות...")
 
 if user_input:
-    system_instruction = "אתה מאמן. החזר JSON עם: response, added_calories (מספר), added_protein (מספר), calories_burned (מספר), added_water (מספר)."
+    st.session_state.chat_history.append({"role": "user", "content": user_input})
+    
+    system_instruction = f"""
+    אתה מאמן כושר ותזונאי אישי חכם.
+    המשתמשת: {gender}, בת {age}, שוקלת {weight} ק"ג.
+    נתח את הקלט: אם זה אוכל - חשב קלוריות וחלבון. אם זו פעילות גופנית - חשב קלוריות שנשרפו.
+    החזר JSON בלבד עם:
+    {{
+        "response": "תגובה מעודדת קצרה",
+        "added_calories": מספר,
+        "added_protein": מספר,
+        "added_water": מספר,
+        "calories_burned": מספר
+    }}
+    """
     
     try:
         response = client.models.generate_content(
-            model='gemini-2.0-flash',
+            model='gemini-2.0-flash', # עדכנתי ל-2.0, הוא יותר יציב
             contents=user_input,
             config={'system_instruction': system_instruction, 'response_mime_type': 'application/json'}
         )
+        
         result = json.loads(response.text.strip())
         
-        # עדכון ושמירה
-        data['calories'] += int(result.get("added_calories", 0))
-        data['protein'] += int(result.get("added_protein", 0))
-        data['burned'] += int(result.get("calories_burned", 0))
-        data['water'] += float(result.get("added_water", 0.0))
-        save_data(data)
+        # עדכון המדדים
+        st.session_state.current_calories += int(result.get("added_calories", 0))
+        st.session_state.current_protein += int(result.get("added_protein", 0))
+        st.session_state.current_water += float(result.get("added_water", 0.0))
+        st.session_state.calories_burned += int(result.get("calories_burned", 0))
         
-        st.success(result.get("response"))
+        st.session_state.chat_history.append({"role": "assistant", "content": result.get("response")})
         st.rerun()
     except Exception as e:
-        st.error("הייתה שגיאה, נסי שוב")
+        st.error("התרחשה שגיאה בתקשורת עם ה-AI")
