@@ -23,7 +23,7 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("### 📅 יעדים יומיים")
 calorie_target = st.sidebar.number_input("יעד קלוריות יומי", value=1800, step=50)
 
-# חישוב אוטומטי: 2 גרם חלבון לכל קילו משקל גוף (הופך למספר שלם)
+# חישוב אוטומטי: 2 גרם חלבון לכל קילו משקל גוף
 protein_target = int(weight * 2)
 st.sidebar.info(f"🎯 יעד חלבון מחושב: {protein_target} גרם")
 
@@ -56,3 +56,68 @@ with col2:
     protein_progress = min(st.session_state.current_protein / protein_target, 1.0) if protein_target > 0 else 0.0
     st.progress(protein_progress)
     st.write(f"{st.session_state.current_protein} / {protein_target} ג׳")
+
+with col3:
+    st.subheader("💧 רוויה (מים)")
+    water_progress = min(st.session_state.current_water / water_target, 1.0) if water_target > 0 else 0.0
+    st.progress(water_progress)
+    st.write(f"{st.session_state.current_water} / {water_target} ליטר")
+
+st.divider()
+
+# --- הצגת היסטוריית הצ'אט על המסך ---
+for message in st.session_state.chat_history:
+    with st.chat_message(message["role"]):
+        st.write(message["content"])
+
+# --- אזור קלט מהמשתמש (במיקום קבוע שלא תלוי בשום תנאי) ---
+user_input = st.chat_input("למשל: אכלתי עכשיו גביע קוטג' וקופסת טונה, ושתיתי כוס מים...")
+
+if user_input:
+    # 1. מציג ושומר את הודעת המשתמש
+    st.session_state.chat_history.append({"role": "user", "content": user_input})
+    
+    # 2. בניית ההוראות ל-AI
+    system_instruction = f"""
+    אתה מאמן כושר ותזונאי אישי חכם ומקצועי.
+    המשתמשת מולך היא {gender} בגיל {age}, במשקל {weight} ק"ג ובגובה {height} ס"מ.
+    עליך לנתח את מה שהיא אכלה או שתתה בהודעה האחרונה ולהחזיר אך ורק אובייקט JSON תקין.
+    
+    מבנה ה-JSON המדויק:
+    {{
+        "response": "תגובה קצרה ומעודדת בעברית על מה שהיא דיווחה, תוך התייחסות לחלבון במידה ויש",
+        "added_calories": מספר קלוריות של האוכל (מספר שלם, או 0 אם לא אכלה),
+        "added_protein": מספר גרמים של חלבון (מספר שלם, או 0 אם לא אכלה או שאין חלבון),
+        "added_water": כמות המים בליטרים (מספר עשרוני, למשל 0.5, או 0.0 אם לא שתתה)
+    }}
+    """
+    
+    try:
+        # 3. פנייה ל-Gemini
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=user_input,
+            config={
+                'system_instruction': system_instruction,
+                'response_mime_type': 'application/json'
+            }
+        )
+        
+        # 4. פירוק ה-JSON
+        result = json.loads(response.text.strip())
+        
+        # 5. עדכון המדדים
+        st.session_state.current_calories += int(result.get("added_calories", 0))
+        st.session_state.current_protein += int(result.get("added_protein", 0))
+        st.session_state.current_water += float(result.get("added_water", 0.0))
+        
+        # 6. שמירת תגובת ה-AI בהיסטוריה
+        ai_response = result.get("response", "הנתונים עודכנו בהצלחה!")
+        st.session_state.chat_history.append({"role": "assistant", "content": ai_response})
+        
+        # ריענון האפליקציה
+        st.rerun()
+        
+    except Exception as e:
+        st.error("התרחשה שגיאה בתקשורת עם ה-AI:")
+        st.exception(e)
