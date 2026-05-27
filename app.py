@@ -266,7 +266,7 @@ with tab_today:
 }}"""
  
         client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
-    
+        try:
             response = client.models.generate_content(
                 model='gemini-2.5-flash',
                 contents=user_input,
@@ -286,7 +286,6 @@ with tab_today:
                 "content": result.get("response", "הנתונים עודכנו!")
             })
  
-            # שמירה אוטומטית לאחר כל עדכון
             save_today_log(
                 st.session_state.current_calories,
                 st.session_state.burned_calories,
@@ -297,6 +296,7 @@ with tab_today:
             )
             st.rerun()
  
+        except Exception as e:
             st.error("שגיאה בתקשורת עם ה-AI:")
             st.exception(e)
  
