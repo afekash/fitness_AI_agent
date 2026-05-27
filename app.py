@@ -1,72 +1,93 @@
 
-
-import streamlit as st
-from google import genai
-from supabase import create_client, Client
-import json
-from datetime import date
- 
-st.set_page_config(page_title="FitAI Buddy", page_icon="💪", layout="wide")
- 
-# =====================================================================
-# SUPABASE – חיבור
-# =====================================================================
-@st.cache_resource
-def get_supabase() -> Client:
-    url = st.secrets["[Credentials]"]
-    key = st.secrets["[Credentials]"]
-    return create_client(url, key)
- 
-supabase = get_supabase()
- 
-# =====================================================================
-# DB FUNCTIONS
-# =====================================================================
-def load_profile():
-    res = supabase.table("profile").select("*").eq("id", 1).execute()
-    return res.data[0] if res.data else None
- 
-def save_profile_db(gender, age, weight, height, cal_t, prot_t, water_t):
-    data = {
-        "id": 1,
-        "gender": gender,
-        "age": age,
-        "weight": weight,
-        "height": height,
-        "cal_target": cal_t,
-        "prot_target": prot_t,
-        "water_target": water_t,
-    }
- 
-    try:
-        supabase.table("profile").upsert(data).execute()
-        st.success("הפרופיל נשמר!")
-    except Exception as e:
-        # זה החלק החשוב - זה ידפיס את השגיאה המלאה למסך
-        st.error(f"שגיאת Supabase מלאה: {e}")
-        # נוסיף גם הדפסה ללוגים למקרה הצורך
         print(e)
+
+        <p>{"נותרו" if remaining >= 0 else "חרגת ב"} {abs(remaining):,} קק"ל מהיעד ({st.session_state.calorie_target:,})</p>
+    </div>
+    """, unsafe_allow_html=True)
  
-def save_today_log(calories_in, burned, protein, water, workout_min, weight):
-    today = date.today().isoformat()
-    net   = calories_in - burned
-    data  = {
-        "log_date":       today,
-        "calories_in":    calories_in,
-        "calories_burned": burned,
-        "net_calories":   net,
-        "protein":        protein,
-        "water":          float(water),
-        "workout_min":    workout_min,
-        "weight":         float(weight),
-    }
-    # בדיקה אם כבר קיימת שורה להיום
-    existing = supabase.table("daily_log").select("id").eq("log_date", today).execute()
-    if existing.data:
-        supabase.table("daily_log").update(data).eq("log_date", today).execute()
-    else:
-        supabase.table("daily_log").insert(data).execute()
+    c1, c2, c3, c4 = st.columns(4)
+    cal_t   = st.session_state.calorie_target
+    prot_t  = st.session_state.protein_target
+    water_t = st.session_state.water_target
  
-def load_history(days=30):
-    res = supabase.table("daily_log") \
-        .select("*") 
+    with c1:
+        st.subheader("🍎 קלוריות שנאכלו")
+        st.progress(min(st.session_state.current_calories / cal_t, 1.0) if cal_t else 0)
+        st.write(f"{st.session_state.current_calories:,} / {cal_t:,} קק\"ל")
+ 
+    with c2:
+        st.subheader("🔥 קלוריות נשרפות")
+        st.progress(min(st.session_state.burned_calories / 800, 1.0))
+        st.write(f"{st.session_state.burned_calories} קק\"ל ({st.session_state.workout_minutes} דק')")
+ 
+    with c3:
+        st.subheader("🥩 חלבון")
+        st.progress(min(st.session_state.current_protein / prot_t, 1.0) if prot_t else 0)
+        st.write(f"{st.session_state.current_protein} / {prot_t} ג'")
+ 
+    with c4:
+        st.subheader("💧 מים")
+        st.progress(min(st.session_state.current_water / water_t, 1.0) if water_t else 0)
+        st.write(f"{st.session_state.current_water:.1f} / {water_t:.1f} ל'")
+ 
+    st.divider()
+ 
+    # צ'אט
+    for message in st.session_state.chat_history:
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
+ 
+    user_input = st.chat_input("למשל: אכלתי 2 ביצים וקוטג׳, שתיתי כוס מים, רצתי 30 דקות...")
+ 
+    if user_input:
+        st.session_state.chat_history.append({"role": "user", "content": user_input})
+ 
+        system_instruction = f"""
+אתה מאמן כושר ותזונאי אישי חכם ומקצועי.
+המשתמש: {st.session_state.saved_gender}, גיל {st.session_state.saved_age},
+משקל {st.session_state.saved_weight} ק"ג, גובה {st.session_state.saved_height} ס"מ.
+נתח את ההודעה: מה אכל/שתה/אילו אימונים עשה.
+אם מוזכר אימון – חשב קלוריות שנשרפו ודקות אימון.
+החזר אך ורק JSON תקין:
+{{
+    "response": "תגובה קצרה ומעודדת בעברית",
+    "added_calories": מספר שלם,
+    "added_protein":  מספר שלם,
+    "added_water":    מספר עשרוני,
+    "burned_calories": מספר שלם,
+    "workout_minutes": מספר שלם
+}}"""
+ 
+        client = genai.Client(api_key=st.secrets["[Credentials]"])
+        try:
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=user_input,
+                config={'system_instruction': system_instruction,
+                        'response_mime_type': 'application/json'}
+            )
+            result = json.loads(response.text.strip())
+ 
+            st.session_state.current_calories  += int(result.get("added_calories", 0))
+            st.session_state.current_protein   += int(result.get("added_protein", 0))
+            st.session_state.current_water     += float(result.get("added_water", 0.0))
+            st.session_state.burned_calories   += int(result.get("burned_calories", 0))
+            st.session_state.workout_minutes   += int(result.get("workout_minutes", 0))
+ 
+            st.session_state.chat_history.append({
+                "role": "assistant",
+                "content": result.get("response", "הנתונים עודכנו!")
+            })
+ 
+            save_today_log(
+                st.session_state.current_calories,
+                st.session_state.burned_calories,
+                st.session_state.current_protein,
+                st.session_state.current_water,
+                st.session_state.workout_minutes,
+                st.session_state.saved_weight,
+            )
+            st.rerun()
+ 
+        except Exception as e:
+            st.error("שגיאה בתקשורת עם ה-AI:")
