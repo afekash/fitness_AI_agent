@@ -37,7 +37,12 @@ def save_profile_db(gender, age, weight, height, cal_t, prot_t, water_t):
         "water_target": water_t,
     }
  
-    supabase.table("profile").upsert(data).execute()
+    try:
+        supabase.table("profile").upsert(data).execute()
+        st.success("הפרופיל נשמר!")
+    except Exception as e:
+        st.error(f"שגיאת Supabase מלאה: {e}")
+        print(e)
  
 def save_today_log(calories_in, burned, protein, water, workout_min, weight):
     today = date.today().isoformat()
