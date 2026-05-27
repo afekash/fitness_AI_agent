@@ -69,4 +69,4 @@ def save_today_log(calories_in, burned, protein, water, workout_min, weight):
  
 def load_history(days=30):
     res = supabase.table("daily_log") \
-        .select("*") \
+        .select("*") 
