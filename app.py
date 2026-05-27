@@ -36,12 +36,8 @@ def save_profile_db(gender, age, weight, height, cal_t, prot_t, water_t):
         "prot_target": prot_t,
         "water_target": water_t,
     }
-    try:
-        res = supabase.table("profile").upsert(data).execute()
-        st.write("✅ upsert result:", res)
-    except Exception as e:
-        st.error(f"❌ שגיאה מלאה: {str(e)}")
-        raise e
+ 
+    supabase.table("profile").upsert(data).execute()
  
 def save_today_log(calories_in, burned, protein, water, workout_min, weight):
     today = date.today().isoformat()
@@ -121,13 +117,13 @@ for k, v in defaults.items():
 if not st.session_state.db_loaded:
     row = load_profile()
     if row:
-        st.session_state.saved_gender   = row["gender"]
-        st.session_state.saved_age      = row["age"]
-        st.session_state.saved_weight   = row["weight"]
-        st.session_state.saved_height   = row["height"]
-        st.session_state.calorie_target = row["cal_target"]
-        st.session_state.protein_target = row["prot_target"]
-        st.session_state.water_target   = row["water_target"]
+        st.session_state.saved_gender   = str(row["gender"])
+        st.session_state.saved_age      = int(row["age"])
+        st.session_state.saved_weight   = float(row["weight"])
+        st.session_state.saved_height   = int(row["height"])
+        st.session_state.calorie_target = int(row["cal_target"])
+        st.session_state.protein_target = int(row["prot_target"])
+        st.session_state.water_target   = float(row["water_target"])
         st.session_state.profile_saved  = True
     st.session_state.db_loaded = True
  
@@ -270,7 +266,7 @@ with tab_today:
 }}"""
  
         client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
-        try:
+    
             response = client.models.generate_content(
                 model='gemini-2.5-flash',
                 contents=user_input,
@@ -301,7 +297,6 @@ with tab_today:
             )
             st.rerun()
  
-        except Exception as e:
             st.error("שגיאה בתקשורת עם ה-AI:")
             st.exception(e)
  
