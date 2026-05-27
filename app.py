@@ -36,7 +36,12 @@ def save_profile_db(gender, age, weight, height, cal_t, prot_t, water_t):
         "prot_target": prot_t,
         "water_target": water_t,
     }
-    supabase.table("profile").upsert(data).execute()
+    try:
+        res = supabase.table("profile").upsert(data).execute()
+        st.write("✅ upsert result:", res)
+    except Exception as e:
+        st.error(f"❌ שגיאה מלאה: {str(e)}")
+        raise e
  
 def save_today_log(calories_in, burned, protein, water, workout_min, weight):
     today = date.today().isoformat()
@@ -365,4 +370,3 @@ with tab_history:
  
         csv = df_table[cols_show].to_csv(index=False).encode("utf-8-sig")
         st.download_button("⬇️ ייצא ל-CSV", csv, "fitai_history.csv", "text/csv")
- 
