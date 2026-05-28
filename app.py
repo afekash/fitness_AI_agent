@@ -187,11 +187,7 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("### 📅 יומן")
 # ... שאר הקוד של יומן היום נשאר אותו דבר ...
  
-# =====================================================================
-# SIDEBAR – שמירה ואיפוס
-# =====================================================================
-st.sidebar.markdown("### 📅 יומן")
- 
+
 if st.sidebar.button("💿 שמור נתוני היום", use_container_width=True, type="primary"):
     save_today_log(
         st.session_state.current_calories,
