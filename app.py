@@ -146,20 +146,19 @@ def calculate_targets(gender, age, weight, height):
 st.sidebar.title("🎯 הגדרות ויעדים")
 st.sidebar.markdown("### 👤 פרופיל אישי")
 
-# הגדרת השדות (Inputs)
+# הגדרת השדות
 name_input = st.sidebar.text_input("הכניסי את שמך:", value=st.session_state.get('saved_name', ''))
 gender_input = st.sidebar.selectbox("מגדר", ["גבר", "אישה"], index=["גבר","אישה"].index(st.session_state.saved_gender))
 age_input    = st.sidebar.number_input("גיל", 10, 100, st.session_state.saved_age, 1)
 weight_input = st.sidebar.number_input('משקל (ק"ג)', 30.0, 200.0, float(st.session_state.saved_weight), 0.1)
 height_input = st.sidebar.number_input('גובה (ס"מ)', 100, 250, st.session_state.saved_height, 1)
 
-# חישוב תצוגה מקדימה
 preview_cal, preview_prot, preview_water = calculate_targets(gender_input, age_input, weight_input, height_input)
 st.sidebar.info(f"📊 תצוגה מקדימה:\n🔥 {preview_cal} קק\"ל | 🥩 {preview_prot}ג' | 💧 {preview_water}ל'")
 
-# כפתור שמירה אחד ויחיד
+# כפתור שמירה אחד
 if st.sidebar.button("💾 שמור פרופיל", use_container_width=True, type="primary"):
-    # 1. עדכון ה-Session State כדי שהאפליקציה תזכור את זה מיד
+    # עדכון הזיכרון (Session State)
     st.session_state.saved_name = name_input
     st.session_state.saved_gender = gender_input
     st.session_state.saved_age = age_input
@@ -168,16 +167,25 @@ if st.sidebar.button("💾 שמור פרופיל", use_container_width=True, typ
     st.session_state.calorie_target = preview_cal
     st.session_state.protein_target = preview_prot
     st.session_state.water_target = preview_water
-    st.session_state.profile_saved = True
     
-    # 2. שמירה ל-DB
+    # שמירה ל-DB
     save_profile_db(name_input, gender_input, age_input, weight_input, height_input, 
                     preview_cal, preview_prot, preview_water)
     
-    st.rerun()
-
-if st.session_state.get('profile_saved', False):
+    # הצגת הודעה שמופיעה רק אחרי הלחיצה
     st.sidebar.success("✅ הפרופיל נשמר!")
+    
+    # אם את רוצה שהיא תיעלם אחרי שהדף נטען שוב, 
+    # אפשר להשתמש ב-st.rerun() כאן, או פשוט להשאיר את זה ככה
+    # st.rerun() 
+
+st.sidebar.markdown("---")
+
+# =====================================================================
+# SIDEBAR – יומן
+# =====================================================================
+st.sidebar.markdown("### 📅 יומן")
+# ... שאר הקוד של יומן היום נשאר אותו דבר ...
  
 # =====================================================================
 # SIDEBAR – שמירה ואיפוס
