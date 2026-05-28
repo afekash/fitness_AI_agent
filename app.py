@@ -148,51 +148,39 @@ def calculate_targets(gender, age, weight, height):
 st.sidebar.title("🎯 הגדרות ויעדים")
 st.sidebar.markdown("### 👤 פרופיל אישי")
 
-# 1. קודם כל נגדיר את כל השדות (Inputs)
-name_input = st.sidebar.text_input("הכניסי את שמך:")
+# הגדרת השדות (Inputs)
+name_input = st.sidebar.text_input("הכניסי את שמך:", value=st.session_state.get('saved_name', ''))
 gender_input = st.sidebar.selectbox("מגדר", ["גבר", "אישה"], index=["גבר","אישה"].index(st.session_state.saved_gender))
 age_input    = st.sidebar.number_input("גיל", 10, 100, st.session_state.saved_age, 1)
 weight_input = st.sidebar.number_input('משקל (ק"ג)', 30.0, 200.0, float(st.session_state.saved_weight), 0.1)
 height_input = st.sidebar.number_input('גובה (ס"מ)', 100, 250, st.session_state.saved_height, 1)
 
-# 2. נחשב את היעדים עם הנתונים שהמשתמש הזין
+# חישוב תצוגה מקדימה
 preview_cal, preview_prot, preview_water = calculate_targets(gender_input, age_input, weight_input, height_input)
-
-# 3. נציג את התצוגה המקדימה
 st.sidebar.info(f"📊 תצוגה מקדימה:\n🔥 {preview_cal} קק\"ל | 🥩 {preview_prot}ג' | 💧 {preview_water}ל'")
 
-# 4. ורק בסוף נשים את כפתור השמירה, שמשתמש בכל הנתונים האלו
-if st.sidebar.button("שמרי פרופיל"):
-    save_profile_db(
-        name_input, # זה השם החדש
-        gender_input, 
-        age_input, 
-        weight_input, 
-        height_input, 
-        preview_cal, 
-        preview_prot, 
-        preview_water
-    )
-    st.sidebar.success("הפרופיל נשמר בהצלחה!")
- 
- 
+# כפתור שמירה אחד ויחיד
 if st.sidebar.button("💾 שמור פרופיל", use_container_width=True, type="primary"):
-    st.session_state.saved_gender   = gender_input
-    st.session_state.saved_age      = age_input
-    st.session_state.saved_weight   = weight_input
-    st.session_state.saved_height   = height_input
+    # 1. עדכון ה-Session State כדי שהאפליקציה תזכור את זה מיד
+    st.session_state.saved_name = name_input
+    st.session_state.saved_gender = gender_input
+    st.session_state.saved_age = age_input
+    st.session_state.saved_weight = weight_input
+    st.session_state.saved_height = height_input
     st.session_state.calorie_target = preview_cal
     st.session_state.protein_target = preview_prot
-    st.session_state.water_target   = preview_water
-    st.session_state.profile_saved  = True
-    save_profile_db(gender_input, age_input, weight_input, height_input,
+    st.session_state.water_target = preview_water
+    st.session_state.profile_saved = True
+    
+    # 2. שמירה ל-DB
+    save_profile_db(name_input, gender_input, age_input, weight_input, height_input, 
                     preview_cal, preview_prot, preview_water)
+    
     st.rerun()
+
+if st.session_state.get('profile_saved', False):
+    st.sidebar.success("✅ הפרופיל נשמר!")
  
-if st.session_state.profile_saved:
-    st.sidebar.markdown('<span class="saved-badge">✅ פרופיל נשמר!</span>', unsafe_allow_html=True)
- 
-st.sidebar.markdown("---")
  
 # =====================================================================
 # SIDEBAR – שמירה ואיפוס
