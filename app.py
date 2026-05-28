@@ -25,9 +25,10 @@ def load_profile():
     res = supabase.table("profile").select("*").eq("id", 1).execute()
     return res.data[0] if res.data else None
  
-def save_profile_db(gender, age, weight, height, cal_t, prot_t, water_t):
+def save_profile_db(name,gender, age, weight, height, cal_t, prot_t, water_t):
     data = {
         "id": 1,
+        "name" :name, 
         "gender": gender,
         "age": age,
         "weight": weight,
@@ -36,6 +37,7 @@ def save_profile_db(gender, age, weight, height, cal_t, prot_t, water_t):
         "prot_target": prot_t,
         "water_target": water_t,
     }
+ 
  
     try:
         supabase.table("profile").upsert(data).execute()
@@ -145,16 +147,34 @@ def calculate_targets(gender, age, weight, height):
 # =====================================================================
 st.sidebar.title("🎯 הגדרות ויעדים")
 st.sidebar.markdown("### 👤 פרופיל אישי")
- 
-gender_input = st.sidebar.selectbox("מגדר", ["גבר", "אישה"],
-                   index=["גבר","אישה"].index(st.session_state.saved_gender))
+
+# 1. קודם כל נגדיר את כל השדות (Inputs)
+name_input = st.sidebar.text_input("הכניסי את שמך:")
+gender_input = st.sidebar.selectbox("מגדר", ["גבר", "אישה"], index=["גבר","אישה"].index(st.session_state.saved_gender))
 age_input    = st.sidebar.number_input("גיל", 10, 100, st.session_state.saved_age, 1)
-weight_input = st.sidebar.number_input('משקל (ק"ג)', 30.0, 200.0, st.session_state.saved_weight, 0.1)
+weight_input = st.sidebar.number_input('משקל (ק"ג)', 30.0, 200.0, float(st.session_state.saved_weight), 0.1)
 height_input = st.sidebar.number_input('גובה (ס"מ)', 100, 250, st.session_state.saved_height, 1)
- 
-preview_cal, preview_prot, preview_water = calculate_targets(
-    gender_input, age_input, weight_input, height_input)
+
+# 2. נחשב את היעדים עם הנתונים שהמשתמש הזין
+preview_cal, preview_prot, preview_water = calculate_targets(gender_input, age_input, weight_input, height_input)
+
+# 3. נציג את התצוגה המקדימה
 st.sidebar.info(f"📊 תצוגה מקדימה:\n🔥 {preview_cal} קק\"ל | 🥩 {preview_prot}ג' | 💧 {preview_water}ל'")
+
+# 4. ורק בסוף נשים את כפתור השמירה, שמשתמש בכל הנתונים האלו
+if st.sidebar.button("שמרי פרופיל"):
+    save_profile_db(
+        name_input, # זה השם החדש
+        gender_input, 
+        age_input, 
+        weight_input, 
+        height_input, 
+        preview_cal, 
+        preview_prot, 
+        preview_water
+    )
+    st.sidebar.success("הפרופיל נשמר בהצלחה!")
+ 
  
 if st.sidebar.button("💾 שמור פרופיל", use_container_width=True, type="primary"):
     st.session_state.saved_gender   = gender_input
